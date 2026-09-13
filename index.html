@@ -114,6 +114,15 @@
     padding: 0 4px;
   }
   #timer { color: #ffd54a; }
+  #home-btn {
+    background: #3a3a4e;
+    border: 2px solid #5a5a76;
+    color: white;
+    font-size: 16px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
 
   #maze-wrap {
     display: inline-block;
@@ -237,6 +246,7 @@
 <!-- GAME SCREEN -->
 <div id="game-screen" class="screen">
   <div id="hud">
+    <button id="home-btn" onclick="confirmBackToHome()">🏠</button>
     <div id="hud-name"></div>
     <div id="timer">0.0s</div>
   </div>
@@ -292,6 +302,15 @@
     <h3>🏆 High Scores</h3>
     <div id="highscore-content">Loading...</div>
     <button class="action" onclick="closeModal('highscore-modal')">Close</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="leave-modal">
+  <div class="modal-box">
+    <h3>🏠 Back to home?</h3>
+    <p>You'll lose progress on this maze if you leave now.</p>
+    <button class="action" onclick="goHomeConfirmed()">Yes, go home</button>
+    <button class="action secondary" onclick="closeModal('leave-modal')">Keep playing</button>
   </div>
 </div>
 
@@ -542,6 +561,15 @@ function showScreen(id) {
 }
 function backToSetup() { clearInterval(timerInterval); showScreen('setup-screen'); }
 function playAgainSameSettings() { startGame(); }
+
+function confirmBackToHome() {
+  if (won) { backToSetup(); return; }
+  openModal('leave-modal');
+}
+function goHomeConfirmed() {
+  closeModal('leave-modal');
+  backToSetup();
+}
 
 /* ================= GAME LOGIC ================= */
 function startGame() {
