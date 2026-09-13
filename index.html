@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c1c28">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Maze Adventure">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Maze Adventure!</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    background: #1c1c28;
+    color: white;
+    text-align: center;
+    padding: 14px;
+    margin: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  h1 {
+    text-shadow: 2px 2px #000;
+    letter-spacing: 1px;
+    font-size: 24px;
+    margin: 4px 0 10px;
+  }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  #setup-screen {
+    max-width: 420px;
+    margin: 0 auto;
+    background: #2a2a3a;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  label {
+    display: block;
+    margin: 14px 0 8px;
+    font-weight: bold;
+    color: #ffd54a;
+  }
+  input[type=text] {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 16px;
+    text-align: center;
+  }
+  .choice-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .choice-btn {
+    flex: 1 1 auto;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 3px solid transparent;
+    background: #3a3a4e;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .choice-btn.selected {
+    border-color: #ffd54a;
+    background: #4a4a66;
+  }
+  #start-btn {
+    margin-top: 20px;
+    background: #7ed957;
+    border: 3px solid #4a7a30;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #1a1a1a;
+    width: 100%;
+  }
+  #start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #install-btn, #highscore-btn {
+    margin-top: 14px;
+    background: #3a3a4e;
+    border: 2px solid #5a5a76;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #fff;
+    font-family: inherit;
+    width: 100%;
+  }
+  #install-btn { display: none; }
+
+  #game-screen, #end-screen { max-width: 600px; margin: 0 auto; }
+
+  #hud {
+    display: flex;
+    justify-content: space-between;
+    max-width: 480px;
+    margin: 0 auto 8px;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 0 4px;
+  }
+  #timer { color: #ffd54a; }
+
+  #maze-wrap {
+    display: inline-block;
+    padding: 10px;
+    border: 5px solid #4a4a4a;
+    border-radius: 4px;
+    max-width: 100%;
+  }
+  canvas {
+    display: block;
+    image-rendering: pixelated;
+    touch-action: none;
+    width: min(480px, 88vw);
+    height: min(480px, 88vw);
+  }
+  #swipe-hint {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #aaa;
+    display: none;
+  }
+
+  .buttons { margin-top: 14px; }
+  button.action {
+    border: 3px solid #4a7a30;
+    background: #7ed957;
+    padding: 10px 16px;
+    margin: 4px 6px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #1a1a1a;
+    font-family: inherit;
+  }
+  button.action.secondary {
+    background: #3a3a4e;
+    border-color: #5a5a76;
+    color: white;
+  }
+
+  .dpad { display: none; margin: 10px auto 0; width: 150px; }
+  .dpad-row { display: flex; justify-content: center; }
+  .dpad button { width: 46px; height: 46px; font-size: 18px; margin: 2px; padding: 0; border-radius: 8px; border: 2px solid #5a5a76; background: #3a3a4e; color: white; }
+  @media (pointer: coarse) {
+    #swipe-hint { display: block; }
+  }
+
+  #end-screen {
+    background: #2a2a3a;
+    border-radius: 12px;
+    padding: 26px 20px;
+  }
+  #end-screen h2 { color: #ffd54a; margin-top: 0; }
+  #final-stats { font-size: 18px; margin: 14px 0; line-height: 1.7; }
+  #final-score { font-size: 36px; font-weight: bold; color: #7ed957; text-shadow: 2px 2px #000; }
+  #medal-display { font-size: 48px; margin: 10px 0; }
+  #totals-box {
+    margin-top: 18px;
+    padding: 14px;
+    background: #1c1c28;
+    border-radius: 8px;
+    font-size: 15px;
+    line-height: 1.8;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-box {
+    background: #2a2a3a;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 380px;
+    text-align: left;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .modal-box h3 { color: #ffd54a; margin-top: 0; text-align: center; }
+  .modal-box button { margin-top: 16px; width: 100%; }
+</style>
+</head>
+<body>
+
+<h1 id="main-title">🎮 Maze Adventure 🎮</h1>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" class="screen active">
+  <label for="player-name">What's your name?</label>
+  <input type="text" id="player-name" maxlength="16" placeholder="Type your name">
+
+  <label>Choose a theme</label>
+  <div class="choice-row" id="theme-choices">
+    <button class="choice-btn" data-theme="minecraft">⛏️ Minecraft</button>
+    <button class="choice-btn" data-theme="space">🚀 Space</button>
+    <button class="choice-btn" data-theme="jungle">🐒 Jungle</button>
+    <button class="choice-btn" data-theme="pirate">🏴‍☠️ Pirates</button>
+  </div>
+
+  <label>Choose a size</label>
+  <div class="choice-row" id="size-choices">
+    <button class="choice-btn" data-size="small">Small</button>
+    <button class="choice-btn" data-size="medium">Medium</button>
+    <button class="choice-btn" data-size="large">Large</button>
+  </div>
+
+  <button id="start-btn" disabled>Start!</button>
+  <button id="highscore-btn">🏆 High Scores</button>
+  <button id="install-btn">⬇️ Install App</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+  <div id="hud">
+    <div id="hud-name"></div>
+    <div id="timer">0.0s</div>
+  </div>
+  <div id="maze-wrap">
+    <canvas id="mazeCanvas" width="560" height="560"></canvas>
+  </div>
+  <div id="swipe-hint">👆 Swipe on the maze to move</div>
+  <div class="dpad">
+    <div class="dpad-row"><button onclick="tryMove(0,-1)">⬆️</button></div>
+    <div class="dpad-row">
+      <button onclick="tryMove(-1,0)">⬅️</button>
+      <button onclick="tryMove(0,1)">⬇️</button>
+      <button onclick="tryMove(1,0)">➡️</button>
+    </div>
+  </div>
+</div>
+
+<!-- END SCREEN -->
+<div id="end-screen" class="screen">
+  <h2 id="end-heading"></h2>
+  <div id="medal-display"></div>
+  <div id="final-stats"></div>
+  <div id="final-score"></div>
+  <div id="totals-box"></div>
+  <div class="buttons">
+    <button class="action" onclick="playAgainSameSettings()">🔄 Play Again</button>
+    <button class="action secondary" onclick="backToSetup()">⚙️ Change Settings</button>
+  </div>
+</div>
+
+<!-- INSTALL INSTRUCTIONS MODAL (iOS fallback) -->
+<div class="modal-overlay" id="ios-modal">
+  <div class="modal-box">
+    <h3>📲 Install on iPad/iPhone</h3>
+    <p>1. Tap the <strong>Share</strong> button in Safari (the square with an arrow).</p>
+    <p>2. Scroll down and tap <strong>"Add to Home Screen"</strong>.</p>
+    <p>3. Tap <strong>Add</strong> — the game will appear as an app icon!</p>
+    <button class="action" onclick="closeModal('ios-modal')">Got it</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="host-modal">
+  <div class="modal-box">
+    <h3>🌐 Full app install</h3>
+    <p>This game can be added to your home screen right from the browser share/menu on most devices.</p>
+    <p>For a full one-tap "Install" button (like a real app store install) on Android/Chrome, the file needs to be hosted online rather than opened locally — for example via GitHub Pages, Netlify, or Vercel. Happy to help set that up if you'd like!</p>
+    <button class="action" onclick="closeModal('host-modal')">Got it</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="highscore-modal">
+  <div class="modal-box">
+    <h3>🏆 High Scores</h3>
+    <div id="highscore-content">Loading...</div>
+    <button class="action" onclick="closeModal('highscore-modal')">Close</button>
+  </div>
+</div>
+
+<script>
+/* ================= PWA SETUP ================= */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((err) => console.error('SW registration failed:', err));
+  });
+}
+
+let deferredPrompt = null;
+const installBtn = document.getElementById('install-btn');
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = 'block';
+});
+
+installBtn.addEventListener('click', async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    installBtn.style.display = 'none';
+  } else if (isIOS) {
+    openModal('ios-modal');
+  } else {
+    openModal('host-modal');
+  }
+});
+
+// Show install button by default on iOS too (since beforeinstallprompt never fires there)
+if (isIOS) installBtn.style.display = 'block';
+
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+/* ================= GAME CONFIG ================= */
+const THEMES = {
+  minecraft: {
+    label: 'Minecraft', bg: '#6b6b6b', wallColor: '#2b1a0f',
+    title: '⛏️ Steve\'s Cave Escape ⛏️',
+    drawGoal: (ctx, x, y, size) => {
+      const p = size * 0.12, s = size - p * 2;
+      ctx.fillStyle = '#3fb6e8'; ctx.fillRect(x + p, y + p, s, s);
+      ctx.fillStyle = '#8fe3ff'; ctx.fillRect(x + p + s * 0.2, y + p + s * 0.15, s * 0.25, s * 0.25);
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2; ctx.strokeRect(x + p, y + p, s, s);
+    },
+    drawPlayer: (ctx, x, y, size) => {
+      const u = size / 16;
+      ctx.fillStyle = '#5b3a24'; ctx.fillRect(x + 3*u, y + 1*u, 10*u, 3*u);
+      ctx.fillStyle = '#e0ac69'; ctx.fillRect(x + 3*u, y + 4*u, 10*u, 4*u);
+      ctx.fillStyle = '#3a2a1a'; ctx.fillRect(x + 5*u, y + 5*u, 2*u, 2*u); ctx.fillRect(x + 9*u, y + 5*u, 2*u, 2*u);
+      ctx.fillStyle = '#3fb6e8'; ctx.fillRect(x + 3*u, y + 8*u, 10*u, 5*u);
+      ctx.fillStyle = '#e0ac69'; ctx.fillRect(x + 1*u, y + 8*u, 2*u, 5*u); ctx.fillRect(x + 13*u, y + 8*u, 2*u, 5*u);
+      ctx.fillStyle = '#2a4a8a'; ctx.fillRect(x + 3*u, y + 13*u, 4*u, 2*u); ctx.fillRect(x + 9*u, y + 13*u, 4*u, 2*u);
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.5; ctx.strokeRect(x + 1*u, y + 1*u, 14*u, 14*u);
+    }
+  },
+  space: {
+    label: 'Space', bg: '#0b1026', wallColor: '#c8d4ff',
+    title: '🚀 Rocket to the Planet 🪐',
+    drawGoal: (ctx, x, y, size) => {
+      const cx = x + size/2, cy = y + size/2, r = size*0.32;
+      ctx.fillStyle = '#e8a33f'; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#ffd54a'; ctx.lineWidth = size*0.06;
+      ctx.beginPath(); ctx.ellipse(cx, cy, r*1.6, r*0.5, -0.4, 0, Math.PI*2); ctx.stroke();
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
+    },
+    drawPlayer: (ctx, x, y, size) => {
+      const cx = x + size/2;
+      ctx.fillStyle = '#e0e0e8';
+      ctx.beginPath(); ctx.moveTo(cx, y + size*0.1); ctx.lineTo(x + size*0.68, y + size*0.65); ctx.lineTo(x + size*0.32, y + size*0.65); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#3fb6e8'; ctx.beginPath(); ctx.arc(cx, y + size*0.38, size*0.1, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#e85454';
+      ctx.beginPath(); ctx.moveTo(x + size*0.32, y + size*0.65); ctx.lineTo(x + size*0.2, y + size*0.85); ctx.lineTo(x + size*0.32, y + size*0.78); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x + size*0.68, y + size*0.65); ctx.lineTo(x + size*0.8, y + size*0.85); ctx.lineTo(x + size*0.68, y + size*0.78); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#ff8c3f';
+      ctx.beginPath(); ctx.moveTo(x + size*0.4, y + size*0.65); ctx.lineTo(cx, y + size*0.85); ctx.lineTo(x + size*0.6, y + size*0.65); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(cx, y + size*0.1); ctx.lineTo(x + size*0.68, y + size*0.65); ctx.lineTo(x + size*0.32, y + size*0.65); ctx.closePath(); ctx.stroke();
+    }
+  },
+  jungle: {
+    label: 'Jungle', bg: '#1f4d2b', wallColor: '#0d2b13',
+    title: '🐒 Monkey\'s Jungle Trek 🍌',
+    drawGoal: (ctx, x, y, size) => {
+      ctx.fillStyle = '#ffd54a';
+      ctx.beginPath();
+      ctx.moveTo(x + size*0.3, y + size*0.35);
+      ctx.quadraticCurveTo(x + size*0.15, y + size*0.55, x + size*0.35, y + size*0.75);
+      ctx.quadraticCurveTo(x + size*0.6, y + size*0.85, x + size*0.75, y + size*0.6);
+      ctx.quadraticCurveTo(x + size*0.55, y + size*0.65, x + size*0.45, y + size*0.5);
+      ctx.quadraticCurveTo(x + size*0.4, y + size*0.4, x + size*0.3, y + size*0.35);
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#7a5a1a'; ctx.lineWidth = 1.5; ctx.stroke();
+    },
+    drawPlayer: (ctx, x, y, size) => {
+      const cx = x + size/2, cy = y + size/2;
+      ctx.fillStyle = '#8a5a3a';
+      ctx.beginPath(); ctx.arc(cx, cy + size*0.05, size*0.28, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#d9a066';
+      ctx.beginPath(); ctx.arc(cx, cy + size*0.08, size*0.18, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#8a5a3a';
+      ctx.beginPath(); ctx.arc(x + size*0.28, y + size*0.32, size*0.09, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + size*0.72, y + size*0.32, size*0.09, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.arc(cx - size*0.07, cy + size*0.03, size*0.03, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + size*0.07, cy + size*0.03, size*0.03, 0, Math.PI*2); ctx.fill();
+    }
+  },
+  pirate: {
+    label: 'Pirates', bg: '#c9a066', wallColor: '#4a2f1a',
+    title: '🏴‍☠️ Pirate\'s Treasure Hunt 🏴‍☠️',
+    drawGoal: (ctx, x, y, size) => {
+      const p = size*0.18, w = size - p*2, h = size*0.4;
+      ctx.fillStyle = '#8a5a2a'; ctx.fillRect(x + p, y + size*0.5, w, h);
+      ctx.fillStyle = '#6b3f1a'; ctx.fillRect(x + p, y + size*0.35, w, size*0.18);
+      ctx.fillStyle = '#ffd54a'; ctx.fillRect(x + size*0.42, y + size*0.42, size*0.16, size*0.1);
+      ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + p, y + size*0.5, w, h);
+      ctx.strokeRect(x + p, y + size*0.35, w, size*0.18);
+    },
+    drawPlayer: (ctx, x, y, size) => {
+      const cx = x + size/2, cy = y + size/2;
+      ctx.fillStyle = '#d9a066';
+      ctx.beginPath(); ctx.arc(cx, cy, size*0.22, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.arc(cx, cy - size*0.08, size*0.24, Math.PI, 0); ctx.fill();
+      ctx.fillRect(cx - size*0.24, cy - size*0.08, size*0.48, size*0.06);
+      ctx.fillStyle = '#e8e8e8';
+      ctx.beginPath(); ctx.arc(cx, cy - size*0.16, size*0.06, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx - size*0.09, cy - size*0.02); ctx.lineTo(cx - size*0.02, cy + size*0.02); ctx.lineTo(cx - size*0.09, cy + size*0.06); ctx.stroke();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.beginPath(); ctx.arc(cx + size*0.07, cy - size*0.02, size*0.03, 0, Math.PI*2); ctx.fill();
+    }
+  }
+};
+
+const SIZES = {
+  small: { cols: 8, rows: 8, label: 'Small', thresholds: { platinum: 15, silver: 30, bronze: 60 } },
+  medium: { cols: 12, rows: 12, label: 'Medium', thresholds: { platinum: 30, silver: 60, bronze: 120 } },
+  large: { cols: 16, rows: 16, label: 'Large', thresholds: { platinum: 60, silver: 120, bronze: 240 } }
+};
+
+const MEDAL_EMOJI = { platinum: '🏆', silver: '🥈', bronze: '🥉', none: '🎯' };
+const MEDAL_LABEL = { platinum: 'Platinum!', silver: 'Silver!', bronze: 'Bronze!', none: 'Finished!' };
+
+/* ================= STATE ================= */
+let selectedTheme = null, selectedSize = null, playerName = '';
+let grid = [], cols, rows, cellSize;
+let player = { col: 0, row: 0 };
+let won = false, startTime = null, timerInterval = null;
+
+const canvas = document.getElementById('mazeCanvas');
+const ctx = canvas.getContext('2d');
+
+/* ================= PERSISTENT STATS ================= */
+const STATS_KEY = 'maze-adventure-stats';
+const defaultStats = { totalScore: 0, medals: { bronze: 0, silver: 0, platinum: 0 }, bestByCombo: {} };
+
+async function loadStats() {
+  try {
+    const res = await window.storage.get(STATS_KEY);
+    if (res && res.value) return JSON.parse(res.value);
+  } catch (e) { /* no stats yet */ }
+  return JSON.parse(JSON.stringify(defaultStats));
+}
+
+async function saveStats(stats) {
+  try {
+    await window.storage.set(STATS_KEY, JSON.stringify(stats));
+  } catch (e) { console.error('Could not save stats', e); }
+}
+
+async function recordResult(comboKey, score, medal) {
+  const stats = await loadStats();
+  stats.totalScore += score;
+  if (medal !== 'none') stats.medals[medal] = (stats.medals[medal] || 0) + 1;
+  const prevBest = stats.bestByCombo[comboKey];
+  const isNewBest = !prevBest || score > prevBest.score;
+  if (isNewBest) stats.bestByCombo[comboKey] = { score, medal };
+  await saveStats(stats);
+  return { stats, isNewBest };
+}
+
+document.getElementById('highscore-btn').addEventListener('click', async () => {
+  const stats = await loadStats();
+  renderHighScores(stats);
+  openModal('highscore-modal');
+});
+
+function renderHighScores(stats) {
+  let html = `<p><strong>Total Score:</strong> ${stats.totalScore}</p>`;
+  html += `<p>🏆 Platinum: ${stats.medals.platinum} &nbsp; 🥈 Silver: ${stats.medals.silver} &nbsp; 🥉 Bronze: ${stats.medals.bronze}</p>`;
+  const combos = Object.keys(stats.bestByCombo);
+  if (combos.length) {
+    html += '<p><strong>Best runs:</strong></p><ul style="padding-left:18px; margin:0;">';
+    combos.forEach(key => {
+      const [theme, size] = key.split('|');
+      const b = stats.bestByCombo[key];
+      html += `<li>${THEMES[theme].label} / ${SIZES[size].label}: ${b.score} pts ${MEDAL_EMOJI[b.medal]}</li>`;
+    });
+    html += '</ul>';
+  } else {
+    html += '<p>Play a maze to start setting records!</p>';
+  }
+  document.getElementById('highscore-content').innerHTML = html;
+}
+
+/* ================= SETUP SCREEN ================= */
+document.querySelectorAll('#theme-choices .choice-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#theme-choices .choice-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedTheme = btn.dataset.theme;
+    checkReady();
+  });
+});
+document.querySelectorAll('#size-choices .choice-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#size-choices .choice-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedSize = btn.dataset.size;
+    checkReady();
+  });
+});
+document.getElementById('player-name').addEventListener('input', checkReady);
+
+function checkReady() {
+  const nameVal = document.getElementById('player-name').value.trim();
+  document.getElementById('start-btn').disabled = !(nameVal && selectedTheme && selectedSize);
+}
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  playerName = document.getElementById('player-name').value.trim();
+  startGame();
+});
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function backToSetup() { clearInterval(timerInterval); showScreen('setup-screen'); }
+function playAgainSameSettings() { startGame(); }
+
+/* ================= GAME LOGIC ================= */
+function startGame() {
+  const sizeConf = SIZES[selectedSize];
+  cols = sizeConf.cols; rows = sizeConf.rows;
+  cellSize = canvas.width / cols;
+
+  document.getElementById('hud-name').textContent = playerName;
+  document.getElementById('main-title').textContent = THEMES[selectedTheme].title;
+
+  generateMaze();
+  player = { col: 0, row: 0 };
+  won = false;
+  startTime = Date.now();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 100);
+
+  showScreen('game-screen');
+  draw();
+}
+
+function updateTimer() {
+  const elapsed = (Date.now() - startTime) / 1000;
+  document.getElementById('timer').textContent = elapsed.toFixed(1) + 's';
+}
+
+function Cell(col, row) {
+  this.col = col; this.row = row;
+  this.walls = { top: true, right: true, bottom: true, left: true };
+  this.visited = false;
+}
+function index(col, row) {
+  if (col < 0 || row < 0 || col >= cols || row >= rows) return -1;
+  return col + row * cols;
+}
+function generateMaze() {
+  grid = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) grid.push(new Cell(c, r));
+  let stack = [];
+  let current = grid[0];
+  current.visited = true;
+  let visitedCount = 1;
+  const total = cols * rows;
+  while (visitedCount < total) {
+    let neighbors = [];
+    const { col, row } = current;
+    const dirs = [
+      { dir: 'top', dc: 0, dr: -1, opposite: 'bottom' },
+      { dir: 'right', dc: 1, dr: 0, opposite: 'left' },
+      { dir: 'bottom', dc: 0, dr: 1, opposite: 'top' },
+      { dir: 'left', dc: -1, dr: 0, opposite: 'right' }
+    ];
+    for (const d of dirs) {
+      const ni = index(col + d.dc, row + d.dr);
+      if (ni !== -1 && !grid[ni].visited) neighbors.push({ cell: grid[ni], ...d });
+    }
+    if (neighbors.length > 0) {
+      const chosen = neighbors[Math.floor(Math.random() * neighbors.length)];
+      current.walls[chosen.dir] = false;
+      chosen.cell.walls[chosen.opposite] = false;
+      stack.push(current);
+      current = chosen.cell;
+      current.visited = true;
+      visitedCount++;
+    } else if (stack.length > 0) {
+      current = stack.pop();
+    }
+  }
+}
+
+function cellAt(col, row) { return grid[index(col, row)]; }
+
+function tryMove(dc, dr) {
+  if (won) return;
+  const cell = cellAt(player.col, player.row);
+  if (dc === 1 && !cell.walls.right) player.col++;
+  else if (dc === -1 && !cell.walls.left) player.col--;
+  else if (dr === 1 && !cell.walls.bottom) player.row++;
+  else if (dr === -1 && !cell.walls.top) player.row--;
+  else return;
+
+  if (player.col === cols - 1 && player.row === rows - 1) {
+    won = true;
+    finishGame();
+  }
+  draw();
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('game-screen').classList.contains('active')) return;
+  const keyMap = { ArrowUp: [0,-1], ArrowDown: [0,1], ArrowLeft: [-1,0], ArrowRight: [1,0] };
+  if (keyMap[e.key]) { e.preventDefault(); tryMove(...keyMap[e.key]); }
+});
+
+/* Touch swipe controls directly on the canvas */
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  touchStartX = t.clientX; touchStartY = t.clientY;
+}, { passive: true });
+canvas.addEventListener('touchend', (e) => {
+  const t = e.changedTouches[0];
+  const dx = t.clientX - touchStartX;
+  const dy = t.clientY - touchStartY;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+  if (Math.abs(dx) > Math.abs(dy)) tryMove(dx > 0 ? 1 : -1, 0);
+  else tryMove(0, dy > 0 ? 1 : -1);
+}, { passive: true });
+
+function getMedal(elapsed) {
+  const t = SIZES[selectedSize].thresholds;
+  if (elapsed <= t.platinum) return 'platinum';
+  if (elapsed <= t.silver) return 'silver';
+  if (elapsed <= t.bronze) return 'bronze';
+  return 'none';
+}
+
+async function finishGame() {
+  clearInterval(timerInterval);
+  const elapsed = (Date.now() - startTime) / 1000;
+  const sizeBonusMap = { small: 1, medium: 1.5, large: 2 };
+  const rawScore = Math.round((cols * rows * 20 * sizeBonusMap[selectedSize]) / (elapsed + 3));
+  const score = Math.max(10, rawScore);
+  const medal = getMedal(elapsed);
+  const comboKey = `${selectedTheme}|${selectedSize}`;
+
+  document.getElementById('end-heading').textContent = `🎉 Nice one, ${playerName}! 🎉`;
+  document.getElementById('medal-display').textContent = `${MEDAL_EMOJI[medal]} ${MEDAL_LABEL[medal]}`;
+  document.getElementById('final-stats').innerHTML =
+    `Theme: <strong>${THEMES[selectedTheme].label}</strong> &nbsp;|&nbsp; Size: <strong>${SIZES[selectedSize].label}</strong><br>` +
+    `Time: <strong>${elapsed.toFixed(1)}s</strong>`;
+  document.getElementById('final-score').textContent = `Score: ${score}`;
+
+  const { stats, isNewBest } = await recordResult(comboKey, score, medal);
+  let totalsHtml = `<strong>Running Total Score: ${stats.totalScore}</strong><br>` +
+    `🏆 ${stats.medals.platinum} &nbsp; 🥈 ${stats.medals.silver} &nbsp; 🥉 ${stats.medals.bronze}`;
+  if (isNewBest) totalsHtml += '<br><span style="color:#ffd54a;">✨ New best for this theme &amp; size! ✨</span>';
+  document.getElementById('totals-box').innerHTML = totalsHtml;
+
+  setTimeout(() => showScreen('end-screen'), 400);
+}
+
+function draw() {
+  const theme = THEMES[selectedTheme];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = theme.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = theme.wallColor;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'square';
+  for (const cell of grid) {
+    const x = cell.col * cellSize, y = cell.row * cellSize;
+    ctx.beginPath();
+    if (cell.walls.top) { ctx.moveTo(x, y); ctx.lineTo(x + cellSize, y); }
+    if (cell.walls.right) { ctx.moveTo(x + cellSize, y); ctx.lineTo(x + cellSize, y + cellSize); }
+    if (cell.walls.bottom) { ctx.moveTo(x, y + cellSize); ctx.lineTo(x + cellSize, y + cellSize); }
+    if (cell.walls.left) { ctx.moveTo(x, y); ctx.lineTo(x, y + cellSize); }
+    ctx.stroke();
+  }
+  ctx.lineWidth = 6;
+  ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+  theme.drawGoal(ctx, (cols - 1) * cellSize, (rows - 1) * cellSize, cellSize);
+  theme.drawPlayer(ctx, player.col * cellSize, player.row * cellSize, cellSize);
+}
+</script>
+
+</body>
+</html>
